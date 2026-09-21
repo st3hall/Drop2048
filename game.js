@@ -2,9 +2,17 @@ const canvas = document.getElementById("gameCanvas");
 
 // ===== Game Constants =====
 
+const WIN_VALUE = 2048;
+let gameWon = false;
+let achievedValues = new Set([2]);
+
+
 const restartBtn = document.getElementById("restartBtn");
 let ghostX = canvas.width / 2;
 let ghostY = 40;
+
+let currentdropId = 0;
+let displayedCombo = 0;
 
 const spawnY = 150;
 const ghostRadius = 20;
@@ -55,7 +63,7 @@ const LEVELS = [
 ];
 
 let nextBallValue = randomStartingValue();
-document.getElementById("nextBall").textContent = nextBallValue;
+// document.getElementById("nextBall").textContent = nextBallValue;
 
 // ===== Matter Setup =====
 
@@ -83,7 +91,7 @@ const render = Render.create({
         width: canvas.width,
         height: canvas.height,
         wireframes: false,
-        background: "#16181d"
+        background: "#2d3446"
     }
 });
 
@@ -233,7 +241,7 @@ function drawThresholdLines() {
 let canDrop = true;
 let gameBalls = [];
 
-function dropBall(x, y = 60, value = 2) {
+function dropBall(x, y = 60, value = 2, options = {}) {
 
     const ballType = BALL_TYPES[value];
 
@@ -257,6 +265,9 @@ function dropBall(x, y = 60, value = 2) {
     ball.value = value;
     ball.isGameBall = true;
     ball.isMerging = false;
+
+    ball.dropId = options.dropId ?? null;
+    ball.comboLevel = options.comboLevel ?? 0;
     
     gameBalls.push(ball);
 
@@ -282,7 +293,7 @@ function restartGame() {
     nextBallValue = randomStartingValue();
 
     document.getElementById("score").textContent = score;
-    document.getElementById("nextBall").textContent = nextBallValue;
+    // document.getElementById("nextBall").textContent = nextBallValue;
     document.getElementById("restartBtn").textContent ="Restart";
     document.getElementById("scorePanel").classList.remove("game-over");
 
@@ -380,14 +391,9 @@ function drawBallValues() {
 function mergeBalls(ballA, ballB) {
 
     if (!ballA || !ballB) return;
-
     if (gameOver) return;
-
     if (ballA.isMerging || ballB.isMerging) return;
-
     if (ballA.value !== ballB.value) return;
-
-    // Do not merge beyond 2048
     if (ballA.value >= 2048) return;
 
     const ballABottom = ballA.position.y + ballA.circleRadius;
@@ -395,32 +401,46 @@ function mergeBalls(ballA, ballB) {
 
 // Both balls must be completely below the merge line
     if (
-    ballABottom < MERGE_LINE_Y ||
-    ballBBottom < MERGE_LINE_Y
+        ballABottom < MERGE_LINE_Y ||
+        ballBBottom < MERGE_LINE_Y
     ) {
-    return;
+        return;
     }
 
     ballA.isMerging = true;
     ballB.isMerging = true;
 
-    const newValue = getNextValue(ballA.value);
 
-    const mergeX =
-        (ballA.position.x + ballB.position.x) / 2;
+    const oldValue = ballA.value;
+    const newValue = getNextValue(oldValue);
 
-    const mergeY =
-        (ballA.position.y + ballB.position.y) / 2;
-
-    const velocityX =
-        (ballA.velocity.x + ballB.velocity.x) / 2;
-
-    const velocityY =
-        (ballA.velocity.y + ballB.velocity.y) / 2;
+    const mergeX = (ballA.position.x + ballB.position.x) / 2;
+    const mergeY = (ballA.position.y + ballB.position.y) / 2;
+    const velocityX = (ballA.velocity.x + ballB.velocity.x) / 2;
+    const velocityY = (ballA.velocity.y + ballB.velocity.y) / 2;
 
     console.log(
         `Merging ${ballA.value} + ${ballB.value} = ${newValue}`
     );
+
+    const belongsToCurrentDrop = 
+        ballA.dropId === currentdropId || 
+        ballB.dropId === currentdropId;
+
+    let newComboLevel = 0;
+    let mergeDropId = null;
+
+    if (belongsToCurrentDrop) {
+        
+        const comboA = 
+            ballA.dropId === currentdropId ? ballA.comboLevel : 0;
+        
+        const comboB = 
+            ballB.dropId === currentdropId ? ballB.comboLevel : 0;
+
+        newComboLevel = Math.max(comboA, comboB) + 1;
+        mergeDropId = currentdropId;
+    }
 
     // Remove old balls from Matter.js
     Composite.remove(engine.world, ballA);
@@ -435,10 +455,15 @@ function mergeBalls(ballA, ballB) {
     const mergedBall = dropBall(
         mergeX,
         mergeY,
-        newValue
+        newValue,
+        {
+            dropId: mergeDropId,
+            comboLevel: newComboLevel
+        }
     );
 
     if (!mergedBall) return;
+    recordAchievement(newValue);
 
     // Preserve some of the movement from the old balls
     Matter.Body.setVelocity(mergedBall, {
@@ -446,8 +471,38 @@ function mergeBalls(ballA, ballB) {
         y: velocityY
     });
 
+    const multiplier = belongsToCurrentDrop ? Math.max(1, newComboLevel) : 1;
+    const pointsEarned = newValue * multiplier;
+    
+    updateScore(pointsEarned);
 
-    updateScore(newValue);
+    if (belongsToCurrentDrop) {
+        displayedCombo = newComboLevel;
+        updateComboDisplay(newComboLevel);
+    
+    }
+
+}
+
+function updateComboDisplay(comboLevel) {
+
+    const comboElement =
+        document.getElementById("combo");
+
+    if (comboLevel <= 0) {
+        comboElement.textContent = "-";
+        return;
+    }
+
+    comboElement.textContent =
+        `${comboLevel}x`;
+
+    comboElement.classList.remove("combo-pop");
+
+    // Force the browser to restart the animation
+    void comboElement.offsetWidth;
+
+    comboElement.classList.add("combo-pop");
 }
 
 function getNextValue(value) {
@@ -561,6 +616,113 @@ function drawGameOverOverlay() {
     ctx.restore();
 }
 
+function createProgressList() {
+
+    const progressList =
+        document.getElementById("progressList");
+
+    progressList.innerHTML = "";
+
+    LEVELS.forEach(value => {
+
+        const ballType = BALL_TYPES[value];
+
+        const item =
+            document.createElement("div");
+
+        item.className = "progressItem";
+        item.dataset.value = value;
+
+        const ballPreview =
+            document.createElement("div");
+
+        ballPreview.className = "progressBall";
+        ballPreview.style.backgroundColor =
+            ballType.color;
+
+        const valueText =
+            document.createElement("span");
+
+        valueText.className = "progressValue";
+        valueText.textContent = value;
+
+        item.appendChild(ballPreview);
+        item.appendChild(valueText);
+
+        if (achievedValues.has(value)) {
+            item.classList.add("achieved");
+        }
+
+        progressList.appendChild(item);
+    });
+}
+
+function winGame() {
+
+    if (gameWon) return;
+
+    gameWon = true;
+    canDrop = false;
+
+    console.log("You created 2048. You win!");
+
+    document.getElementById("restartBtn").textContent =
+        "Play Again";
+}
+
+function drawWinOverlay() {
+
+    if (!gameWon) return;
+
+    const ctx = render.context;
+
+    ctx.save();
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    ctx.fillStyle = "#FFD54F";
+    ctx.shadowColor = "rgba(255, 213, 79, 0.7)";
+    ctx.shadowBlur = 18;
+
+    ctx.font = "bold 48px Arial";
+
+    ctx.fillText(
+        "YOU WIN!",
+        canvas.width / 2,
+        canvas.height / 2 - 55
+    );
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 24px Arial";
+
+    ctx.fillText(
+        "You created 2048",
+        canvas.width / 2,
+        canvas.height / 2 + 5
+    );
+
+    ctx.font = "bold 20px Arial";
+
+    ctx.fillText(
+        `Score: ${score}`,
+        canvas.width / 2,
+        canvas.height / 2 + 50
+    );
+
+    ctx.restore();
+}
+
 // ===== Helpers =====
 
 function randomStartingValue() {
@@ -598,6 +760,82 @@ function updateScore(points) {
     
 }
 
+function updateScore(points) {
+
+    console.log("updateScore called");
+    console.log("points =", points);
+
+    score += points;
+
+    console.log("new score =", score);
+
+    const scoreElement = document.getElementById("score");
+
+    console.log("scoreElement =", scoreElement);
+
+    scoreElement.textContent = score;
+
+    console.log(
+        "scoreElement.textContent =",
+        scoreElement.textContent
+    );
+}
+
+function drawComboText() {
+
+    if (displayedCombo <= 1) return;
+
+    const ctx = render.context;
+
+    ctx.save();
+
+    ctx.fillStyle = "#FFD54F";
+
+    ctx.font = "bold 48px Arial";
+    ctx.textAlign = "center";
+
+    ctx.fillText(
+        `${displayedCombo}x COMBO`,
+        canvas.width / 2,
+        100
+    );
+
+    ctx.restore();
+}
+
+function recordAchievement(value) {
+
+    if (achievedValues.has(value)) {
+        return;
+    }
+
+    achievedValues.add(value);
+
+    const item =
+        document.querySelector(
+            `.progressItem[data-value="${value}"]`
+        );
+
+    if (item) {
+
+        item.classList.add(
+            "achieved",
+            "just-achieved"
+        );
+
+        setTimeout(() => {
+            item.classList.remove(
+                "just-achieved"
+            );
+        }, 400);
+    }
+
+    console.log(`Achievement unlocked: ${value}`);
+
+    if (value >= WIN_VALUE) {
+        winGame();
+    }
+}
 
 
 // ===== Event Listeners =====
@@ -622,26 +860,6 @@ canvas.addEventListener("mousemove", (event) => {
 
 });
 
-function updateScore(points) {
-
-    console.log("updateScore called");
-    console.log("points =", points);
-
-    score += points;
-
-    console.log("new score =", score);
-
-    const scoreElement = document.getElementById("score");
-
-    console.log("scoreElement =", scoreElement);
-
-    scoreElement.textContent = score;
-
-    console.log(
-        "scoreElement.textContent =",
-        scoreElement.textContent
-    );
-}
 
 restartBtn.addEventListener("click", restartGame);
 
@@ -657,21 +875,22 @@ canvas.addEventListener("click", (event) => {
         }   
     }, 100);
     
-    console.log(
-    `Dropping ${nextBallValue} | Radius: ${BALL_TYPES[nextBallValue].radius} | Color: ${BALL_TYPES[nextBallValue].color}`
+    dropBall(ghostX, ghostY, nextBallValue, 
+        {
+        dropId: currentdropId,
+        comboLevel: 0
+        }
     );
-
-    dropBall(ghostX, ghostY, nextBallValue);
 
     nextBallValue = randomStartingValue();
 
-    document.getElementById("nextBall").textContent =
-        nextBallValue;
+    // document.getElementById("nextBall").textContent = nextBallValue;
 
 });
 
 // ===== Start Physics =====
 
+createProgressList();
 Render.run(render);
 
 const runner = Runner.create();
@@ -686,6 +905,8 @@ Matter.Events.on(render, "afterRender", () => {
     drawGhostBall();
     drawBallValues();
     drawGameOverOverlay();
+    drawComboText();
+    drawWinOverlay();
 });
 
 console.log("2048 Drop Loaded");

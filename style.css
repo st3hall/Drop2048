@@ -93,3 +93,130 @@ body {
 
     min-width: 450px;
 }
+
+#combo {
+    font-size: 32px;
+    font-weight: bold;
+    color: #ffd54f;
+}
+
+.combo-pop {
+    animation: comboPop 0.3s ease-out;
+}
+
+@keyframes comboPop {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.4);
+        color: #ffffff;
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+#progressPanel {
+    width: 170px;
+    padding: 20px;
+
+    background: #232830;
+    border-radius: 12px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+#progressPanel h2 {
+    margin: 0 0 5px;
+    text-align: center;
+    font-size: 22px;
+}
+
+#progressList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.progressItem {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    min-height: 34px;
+    padding: 6px 10px;
+
+    background: #2f3640;
+    border-radius: 8px;
+
+    color: #ffffff;
+    font-weight: bold;
+
+    transition:
+        opacity 0.25s ease,
+        transform 0.25s ease,
+        background 0.25s ease;
+}
+
+.progressBall {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 25px;
+    height: 25px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+    color: white;
+    font-size: 9px;
+    font-weight: bold;
+}
+
+.progressItem.achieved {
+    opacity: 0.45;
+    background: #1c2026;
+}
+
+.progressItem.achieved .progressValue {
+    text-decoration: line-through;
+}
+
+.progressItem.achieved::after {
+    content: "✓";
+
+    position: absolute;
+    right: 10px;
+
+    color: #6ee7a2;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.progressItem.just-achieved {
+    animation: achievementPop 0.4s ease-out;
+}
+
+@keyframes achievementPop {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.12);
+        background: #4d7c5e;
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+``
