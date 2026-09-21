@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2048 Drop</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Matter.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>
+</head>
+
+<body>
+    <div id="container">
+        <!-- Score Panel -->
+        <div id="scorePanel">
+            <h1>2048 Drop</h1>
+
+            <div class="scoreBox">
+                <div class="label">Score</div>
+                <div id="score">0</div>
+            </div>
+
+            <div class="scoreBox">
+                <div class="label">High Score</div>
+                <div id="highScore">0</div>
+            </div>
+
+            <div class="scoreBox">
+                <div class="label">Next</div>
+                <div id="nextBall">2</div>
+            </div>
+
+            <button id="restartBtn">Restart</button>
+
+        </div>
+
+        <!-- Game Board -->
+        <div id="gameWrapper">
+            <canvas id="gameCanvas"></canvas>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+
+</body>
+</html>
