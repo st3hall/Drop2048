@@ -20,7 +20,7 @@ canvas.width = 450;
 canvas.height = 700;
 
 const MERGE_LINE_Y = 150;
-const GAME_OVER_LINE_Y = 200;
+const GAME_OVER_LINE_Y = 150;
 
 const GAME_OVER_DELAY = 1500;
 
@@ -34,17 +34,17 @@ document.getElementById("score").textContent = score;
 document.getElementById("highScore").textContent = highScore;
 
 const BALL_TYPES = {
-  2:    { radius: 24,  color: "#FF3B30" }, // Bright Red
-  4:    { radius: 32,  color: "#FF9500" }, // Vibrant Orange
-  8:    { radius: 40,  color: "#007AFF" }, // Vivid Blue
-  16:   { radius: 50,  color: "#34C759" }, // Mint/Teal Green
-  32:   { radius: 62,  color: "#4CD964" }, // Bright Lime Green
-  64:   { radius: 76,  color: "#1C6831" }, // Deep Forest Green
-  128:  { radius: 90,  color: "#85E314" }, // Electric Olive Green
-  256:  { radius: 104, color: "#10341B" }, // Ultra Dark Pine Green
-  512:  { radius: 114, color: "#AF52DE" }, // Vivid Purple
-  1024: { radius: 120, color: "#FF2D55" }, // Hot Pink/Deep Rose
-  2048: { radius: 125, color: "#5856D6" }  // Deep Indigo
+  2:    { radius: 21, color: "#FF3B30" }, // Diameter: 42px
+  4:    { radius: 28, color: "#FF9500" }, // Diameter: 56px
+  8:    { radius: 35, color: "#007AFF" }, // Diameter: 70px
+  16:   { radius: 44, color: "#34C759" }, // Diameter: 88px
+  32:   { radius: 54, color: "#4CD964" }, // Diameter: 108px
+  64:   { radius: 66, color: "#1C6831" }, // Diameter: 132px
+  128:  { radius: 78, color: "#85E314" }, // Diameter: 156px
+  256:  { radius: 90, color: "#10341B" }, // Diameter: 180px
+  512:  { radius: 99, color: "#AF52DE" }, // Diameter: 198px
+  1024: { radius: 104, color: "#FF2D55" }, // Diameter: 208px
+  2048: { radius: 108, color: "#5856D6" }  // Diameter: 216px
 };
 
 
@@ -760,26 +760,6 @@ function updateScore(points) {
     
 }
 
-function updateScore(points) {
-
-    console.log("updateScore called");
-    console.log("points =", points);
-
-    score += points;
-
-    console.log("new score =", score);
-
-    const scoreElement = document.getElementById("score");
-
-    console.log("scoreElement =", scoreElement);
-
-    scoreElement.textContent = score;
-
-    console.log(
-        "scoreElement.textContent =",
-        scoreElement.textContent
-    );
-}
 
 function drawComboText() {
 
