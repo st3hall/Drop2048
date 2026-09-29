@@ -4,56 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2048 Drop</title>
-
     <link rel="stylesheet" href="style.css">
-</head>
-<body>
     <!-- Matter.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>
 </head>
+    <body>
+        <div id="container">
+            <!-- Score Panel -->
+            <div id="scorePanel">
+                <h1>2048 Drop</h1>
+                <div class="scoreBox">
+                    <div class="label">Score</div>
+                    <div id="score">0</div>
+                </div>
+                <div class="scoreBox">
+                    <div class="label">Local High Score</div>
+                    <div id="highScore">0</div>
+                </div>
+                <!-- Leaderboard Block replacing local high score -->
+                <div class="scoreBox leaderboardBox">
+                    <div class="label">Top Scores!</div>
+                    <ol id="leaderboardList">
+                        <li>Loading...</li>
 
-<body>
-    <div id="container">
-        <!-- Score Panel -->
-        <div id="scorePanel">
-            <h1>2048 Drop</h1>
+                    </ol>
+                </div>
 
-            <div class="scoreBox">
-                <div class="label">Score</div>
-                <div id="score">0</div>
+                <button id="restartBtn">Restart</button>
             </div>
 
-            <div class="scoreBox">
-                <div class="label">High Score</div>
-                <div id="highScore">0</div>
-            </div>
-            
-            <div class="scoreBox">
-                <div class="label">Combo</div>
-                <div id="combo">-</div>
+            <!-- Game Board -->
+            <div id="gameWrapper">
+                <canvas id="gameCanvas"></canvas>
             </div>
 
-            <!-- <div class="scoreBox">
-                <div class="label">Next</div>
-                <div id="nextBall">2</div>
-            </div> -->
-            
-            <button id="restartBtn">Restart</button>
-
+            <!-- Progress Panel -->
+            <div id="progressPanel">
+                <h2>Progress</h2>
+                <div id="progressList"></div>
+            </div>
         </div>
 
-        <!-- Game Board -->
-        <div id="gameWrapper">
-            <canvas id="gameCanvas"></canvas>
+        <!-- Custom High Score Input Modal -->
+        <div id="scoreModalOverlay" class="hidden-modal">
+            <div class="modalContent">
+                <h2>New High Score!</h2>
+                <p>Enter your name to claim your spot on the leaderboard:</p>
+                
+                <form id="scoreForm">
+                    <input type="text" id="playerNameInput" maxlength="15" placeholder="Your Name" required autocomplete="off">
+                    <div class="modalButtons">
+                        <button type="submit" id="submitScoreBtn">Submit Score</button>
+                        <button type="button" id="cancelScoreBtn">Cancel</button>
+                    </div>
+                </form>
+            </div>
         </div>
-        <!-- Progress Panel -->
-        <div id="progressPanel">
-            <h2>Progress</h2>
-            <div id="progressList"></div>
-        </div>
-    </div>
+        <!-- Supabase JS Client -->
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        <script src="game.js"></script>
 
-    <script src="game.js"></script>
+    </body>
 
-</body>
 </html>

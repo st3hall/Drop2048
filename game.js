@@ -1,10 +1,21 @@
 const canvas = document.getElementById("gameCanvas");
 
+// ===== Supabase Configuration =====
+const SUPABASE_URL = "https://vjylsvmaolreuvxzwgin.supabase.co";
+const SUPABASE_KEY = "sb_publishable_Zbau4K290SH_6C3wTxtfTA_b3Y4YdPV";
+ 
+const supabaseClient = supabase.createClient(
+SUPABASE_URL,
+SUPABASE_KEY
+);
+
 // ===== Game Constants =====
 
 const WIN_VALUE = 2048;
 let gameWon = false;
 let achievedValues = new Set([2]);
+let lowestLeaderboardScore = 0; 
+
 
 
 const restartBtn = document.getElementById("restartBtn");
@@ -419,9 +430,6 @@ function mergeBalls(ballA, ballB) {
     const velocityX = (ballA.velocity.x + ballB.velocity.x) / 2;
     const velocityY = (ballA.velocity.y + ballB.velocity.y) / 2;
 
-    console.log(
-        `Merging ${ballA.value} + ${ballB.value} = ${newValue}`
-    );
 
     const belongsToCurrentDrop = 
         ballA.dropId === currentdropId || 
@@ -488,6 +496,8 @@ function updateComboDisplay(comboLevel) {
 
     const comboElement =
         document.getElementById("combo");
+    
+    if (!comboElement) return; 
 
     if (comboLevel <= 0) {
         comboElement.textContent = "-";
@@ -559,25 +569,29 @@ function checkGameOver() {
     }
 }
 
-function endGame() {
-
+async function endGame() {
     if (gameOver) return;
 
     gameOver = true;
     canDrop = false;
-
     dangerStartTime = null;
 
-    console.log("Game Over");
+    console.log("Game Over Triggered. Final Score:", score);
 
-    const scorePanel =
-        document.getElementById("scorePanel");
+    const scorePanel = document.getElementById("scorePanel");
+    if (scorePanel) scorePanel.classList.add("game-over");
 
-    scorePanel.classList.add("game-over");
+    document.getElementById("restartBtn").textContent = "Play Again";
 
-    document.getElementById("restartBtn").textContent =
-        "Play Again";
+    // ===== CONDITIONAL LEADERBOARD CHECK =====
+    // Check if the current score beats the 10th place score, or if the board isn't full
+    if (score > lowestLeaderboardScore || lowestLeaderboardScore === 0) {
+        saveHighScore(score); // Show the custom aesthetic text input modal
+    } else {
+        console.log("Game over, but score did not qualify for the Top 10 leaderboard.");
+    }
 }
+
 
 function drawGameOverOverlay() {
 
@@ -736,9 +750,9 @@ function randomStartingValue() {
 
 function updateScore(points) {
 
-    console.log("updateScore called");
-    console.log("points:", points);
-    console.log("score before:", score);
+    // console.log("updateScore called");
+    // console.log("points:", points);
+    // console.log("score before:", score);
 
     score += points;
 
@@ -758,6 +772,74 @@ function updateScore(points) {
             highScore;
     }
     
+}
+
+function resetLocalHighScore() {
+    // 1. Remove the key from the browser's localStorage
+    localStorage.removeItem("highScore");
+    //localStorage.removeItem("highScore"); location.reload();
+
+    // 2. Reset the runtime variable in your code
+    highScore = 0;
+
+    // 3. Update the display panel so it reflects 0 immediately
+    document.getElementById("highScore").textContent = "0";
+    
+    console.log("Local high score successfully cleared!");
+}
+
+async function updateLeaderboardUI() {
+    const { data: topScores, error } = await supabaseClient
+        .from("scores")
+        .select("player_name, score, biggest_ball")
+        .order("score", { ascending: false })
+        .limit(10);
+
+    const listContainer = document.getElementById("leaderboardList");
+    if (!listContainer) return;
+
+    if (error) {
+        console.error("Error fetching leaderboard data:", error.message);
+        return;
+    }
+
+    listContainer.innerHTML = "";
+
+    if (!topScores || topScores.length === 0) {
+        listContainer.innerHTML = "<li>No scores yet!</li>";
+        lowestLeaderboardScore = 0; // Board is empty, any score qualifies
+        return;
+    }
+
+    // ===== ADD THIS TRACKING BLOCK =====
+    if (topScores.length < 10) {
+        // If there are fewer than 10 total entries in the database, any score qualifies
+        lowestLeaderboardScore = 0; 
+    } else {
+        // Grab the score of the person sitting in the last slot (index 9)
+        lowestLeaderboardScore = topScores[topScores.length - 1].score;
+    }
+    // ====================================
+
+    topScores.forEach((entry) => {
+
+        let ballDisplay;
+
+        if (entry.biggest_ball >= 2048) {
+            ballDisplay = `🏆`;
+        }
+
+
+        const listItem = document.createElement("li");
+
+        listItem.innerHTML = `
+            <span class="player">${entry.player_name}</span>
+            <span class="val">${entry.score}</span>
+            ${entry.biggest_ball >= 2048 ? "🏆" : ""}
+        `;
+
+        listContainer.appendChild(listItem);
+    });
 }
 
 
@@ -783,6 +865,8 @@ function drawComboText() {
     ctx.restore();
 }
 
+let biggestBall = 2;
+
 function recordAchievement(value) {
 
     if (achievedValues.has(value)) {
@@ -790,6 +874,12 @@ function recordAchievement(value) {
     }
 
     achievedValues.add(value);
+
+    // Track highest ball achieved
+    if (value > biggestBall) {
+    biggestBall = value;
+    console.log(`New biggest ball: ${biggestBall}`);
+}
 
     const item =
         document.querySelector(
@@ -868,10 +958,64 @@ canvas.addEventListener("click", (event) => {
 
 });
 
+// ===== Spacebar Drop Control =====
+let spacebarInterval = null;
+
+window.addEventListener("keydown", (event) => {
+    // Check if the pressed key is the spacebar
+    if (event.code !== "Space") return;
+    
+    // Prevent the spacebar from scrolling the webpage down
+    event.preventDefault();
+
+    // If the game is over, data is locked, or an interval is already running, do nothing
+    if (gameOver || !canDrop || spacebarInterval !== null) return;
+
+    // Helper function to execute a single drop routine
+    const triggerSpacebarDrop = () => {
+        if (gameOver || !canDrop) return;
+
+        canDrop = false;
+
+        // Enforce the drop timeout delay
+        setTimeout(() => {
+            if (!gameOver) {
+                canDrop = true;
+            }
+        }, 100);
+
+        // Execute the drop using the active ghost placement coordinates
+        dropBall(ghostX, ghostY, nextBallValue, {
+            dropId: currentdropId,
+            comboLevel: 0
+        });
+
+        // Generate the value for the next upcoming ball
+        nextBallValue = randomStartingValue();
+    };
+
+    // Trigger the initial drop instantly on the first press
+    triggerSpacebarDrop();
+
+    // Set an interval to keep dropping automatically every 150ms while held down
+    spacebarInterval = setInterval(() => {
+        triggerSpacebarDrop();
+    }, 150); 
+});
+
+window.addEventListener("keyup", (event) => {
+    // Clear the interval loop immediately when the spacebar is released
+    if (event.code === "Space") {
+        clearInterval(spacebarInterval);
+        spacebarInterval = null;
+    }
+});
+
 // ===== Start Physics =====
 
 createProgressList();
 Render.run(render);
+updateLeaderboardUI();
 
 const runner = Runner.create();
 Runner.run(runner, engine);
@@ -890,3 +1034,101 @@ Matter.Events.on(render, "afterRender", () => {
 });
 
 console.log("2048 Drop Loaded");
+
+// async function saveHighScore(gameScore) {
+//     // 1. Prompt the user for their name
+//     const playerName = prompt("New High Score! Enter your name:");
+    
+//     // If the user hits cancel or leaves it completely blank, stop execution
+//     if (!playerName || playerName.trim() === "") {
+//         console.log("Score submission cancelled by user.");
+//         return;
+//     }
+
+//     // 2. Insert the row into your Supabase "scores" table
+//     const { data, error } = await supabaseClient
+//         .from("scores")
+//         .insert([
+//             { 
+//                 player_name: playerName.trim(), // Make sure this matches your DB column name
+//                 score: gameScore 
+//             }
+//         ])
+//         .select(); // Returns the inserted data for validation
+
+//     // 3. Log results to the console
+//     if (error) {
+//         console.error("Error saving score:", error.message);
+//     } else {
+//         console.log("Score saved successfully!", data);
+//     }
+
+//     await updateLeaderboardUI();
+// }
+// Variable to store the temporary game score while the modal is open
+let pendingScoreToSave = 0;
+
+function saveHighScore(gameScore) {
+    console.log("Showing high score input modal for score:", gameScore);
+    
+    // Store score in our tracking variable
+    pendingScoreToSave = gameScore;
+    
+    // Reveal the hidden modal overlay by removing the hidden utility class
+    const overlay = document.getElementById("scoreModalOverlay");
+    if (overlay) {
+        overlay.classList.remove("hidden-modal");
+        
+        // Auto-focus the input text field for instant typing convenience
+        setTimeout(() => document.getElementById("playerNameInput").focus(), 50);
+    }
+}
+
+// Helper utility to safely tuck away the overlay panel 
+function hideHighScoreModal() {
+    const overlay = document.getElementById("scoreModalOverlay");
+    if (overlay) overlay.classList.add("hidden-modal");
+    
+    // Reset inputs
+    document.getElementById("playerNameInput").value = "";
+}
+
+
+// ===== Wire Up Form Interactions =====
+document.getElementById("scoreForm").addEventListener("submit", async (event) => {
+    // Prevent standard webpage reload actions on form submission
+    event.preventDefault(); 
+    
+    const inputElement = document.getElementById("playerNameInput");
+    const playerName = inputElement.value.trim();
+    console.log([...achievedValues]);
+    console.log(Math.max(...achievedValues));
+    if (!playerName) return;
+
+    const maxBall = Math.max(...achievedValues);
+    console.log("Saving biggest ball:", maxBall);
+    // Send data off to your Supabase table
+    const { data, error } = await supabaseClient
+        .from("scores")
+        .insert([{ player_name: playerName, score: pendingScoreToSave, biggest_ball: maxBall}])
+        .select();
+
+    if (error) {
+        console.error("Error saving score:", error.message);
+    } else {
+        console.log("Score saved successfully via custom form UI!", data);
+        // Force the leaderboard array interface component to refresh columns
+        await updateLeaderboardUI(); 
+    }
+
+    // Dismiss the window framework layout securely
+    hideHighScoreModal();
+});
+
+// Dismiss input if cancel button is triggered
+document.getElementById("cancelScoreBtn").addEventListener("click", () => {
+    console.log("Score submission cancelled by user choice.");
+    hideHighScoreModal();
+});
+
+
