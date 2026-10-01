@@ -582,11 +582,14 @@ async function endGame() {
     if (scorePanel) scorePanel.classList.add("game-over");
 
     document.getElementById("restartBtn").textContent = "Play Again";
+    
+    saveHighScore(score);
 
     // ===== CONDITIONAL LEADERBOARD CHECK =====
     // Check if the current score beats the 10th place score, or if the board isn't full
     if (score > lowestLeaderboardScore || lowestLeaderboardScore === 0) {
-        saveHighScore(score); // Show the custom aesthetic text input modal
+        console.log("Game over, score made it into the top 10");
+         // Show the custom aesthetic text input modal
     } else {
         console.log("Game over, but score did not qualify for the Top 10 leaderboard.");
     }
