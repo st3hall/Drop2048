@@ -680,6 +680,8 @@ function winGame() {
 
     gameWon = true;
     canDrop = false;
+    
+    saveHighScore(score);
 
     console.log("You created 2048. You win!");
 
