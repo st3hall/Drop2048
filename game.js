@@ -1366,7 +1366,6 @@ function draw1024Overlay() {
 function randomStartingValue() {
 
     const options = [2, 2, 2, 2, 4, 4, 8];
-    //const options = [512]; //Test Mode
 
     return options[
         Math.floor(Math.random() * options.length)
