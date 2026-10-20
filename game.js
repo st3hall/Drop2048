@@ -36,6 +36,7 @@ const GAME_OVER_LINE_Y = 150;
 const GAME_OVER_DELAY = 1500;
 
 let gameOver = false;
+let reveal4096AfterFade = false;
 let dangerStartTime = null;
 
 let score = 0;
@@ -55,7 +56,8 @@ const BALL_TYPES = {
   256:  { radius: 90, color: "#10341B" }, // Diameter: 180px
   512:  { radius: 99, color: "#AF52DE" }, // Diameter: 198px
   1024: { radius: 104, color: "#FF2D55" }, // Diameter: 208px
-  2048: { radius: 108, color: "#5856D6" }  // Diameter: 216px
+  2048: { radius: 108, color: "#5856D6" }, // Diameter: 216px
+  4096: { radius: 120, color: "#FFCC00" }  // Diameter: 240px   
 };
 
 
@@ -70,7 +72,8 @@ const LEVELS = [
     256,
     512,
     1024,
-    2048
+    2048,
+    4096
 ];
 
 let nextBallValue = randomStartingValue();
@@ -297,6 +300,7 @@ function restartGame() {
     gameBalls = [];
 
     score = 0;
+    gameWon = false;
     gameOver = false;
     canDrop = true;
     dangerStartTime = null;
@@ -362,28 +366,537 @@ function drawGhostBall() {
 function drawBallValues() {
 
     const ctx = render.context;
+    const time = performance.now();
 
     gameBalls.forEach(ball => {
 
-        const fontSize =
-            Math.max(
-                12,
-                ball.circleRadius * 0.9
-            );
+        const fontSize = Math.max(
+            12,
+            ball.circleRadius * 0.9
+        );
+
+        const pulse =
+            (Math.sin(time * 0.005) + 1) / 2;
+
+        const hue =
+            (time * 0.08) % 360;
 
         ctx.save();
 
-        ctx.translate(ball.position.x, ball.position.y);
+        ctx.translate(
+            ball.position.x,
+            ball.position.y
+        );
+
         ctx.rotate(ball.angle);
 
+
+        // ========================================
+        // 1024 - LIGHT GLAM
+        // ========================================
+
+        if (ball.value === 1024) {
+
+            const innerGlow =
+                ctx.createRadialGradient(
+                    0,
+                    0,
+                    ball.circleRadius * 0.45,
+                    0,
+                    0,
+                    ball.circleRadius
+                );
+
+            innerGlow.addColorStop(
+                0,
+                "rgba(255, 255, 255, 0)"
+            );
+
+            innerGlow.addColorStop(
+                0.75,
+                `rgba(255, 150, 180, ${0.05 + pulse * 0.08})`
+            );
+
+            innerGlow.addColorStop(
+                1,
+                `rgba(255, 220, 230, ${0.25 + pulse * 0.15})`
+            );
+
+            ctx.beginPath();
+
+            ctx.arc(
+                0,
+                0,
+                ball.circleRadius - 2,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fillStyle = innerGlow;
+            ctx.fill();
+        }
+
+
+        // ========================================
+        // 2048 - CHAMPION EFFECT
+        // ========================================
+
+        if (ball.value === 2048) {
+
+            // ========================================
+            // ANIMATED RAINBOW INTERIOR
+            // ========================================
+
+            const innerGlow =
+                ctx.createRadialGradient(
+                    0,
+                    0,
+                    ball.circleRadius * 0.15,
+                    0,
+                    0,
+                    ball.circleRadius
+                );
+
+            innerGlow.addColorStop(
+                0,
+                `hsla(${hue}, 100%, 90%, ${0.18 + pulse * 0.12})`
+            );
+
+            innerGlow.addColorStop(
+                0.45,
+                `hsla(${(hue + 80) % 360}, 100%, 75%, 0.15)`
+            );
+
+            innerGlow.addColorStop(
+                0.75,
+                `hsla(${(hue + 160) % 360}, 100%, 70%, 0.18)`
+            );
+
+            innerGlow.addColorStop(
+                1,
+                `hsla(${(hue + 240) % 360}, 100%, 80%, ${0.40 + pulse * 0.20})`
+            );
+
+            ctx.beginPath();
+
+            ctx.arc(
+                0,
+                0,
+                ball.circleRadius - 2,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fillStyle = innerGlow;
+            ctx.fill();
+
+
+            // ========================================
+            // BRIGHT INNER EDGE
+            // ========================================
+
+            ctx.beginPath();
+
+            ctx.arc(
+                0,
+                0,
+                ball.circleRadius - 5,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.strokeStyle =
+                `hsla(${hue}, 100%, 85%, ${0.75 + pulse * 0.20})`;
+
+            ctx.lineWidth =
+                4 + pulse * 2;
+
+            ctx.shadowColor =
+                `hsl(${hue}, 100%, 80%)`;
+
+            ctx.shadowBlur =
+                10 + pulse * 10;
+
+            ctx.stroke();
+
+
+            // ========================================
+            // ROTATING RAINBOW SPARKS
+            // ========================================
+
+            ctx.save();
+
+            ctx.rotate(time * 0.0015);
+
+            const orbitRadius =
+                ball.circleRadius * 0.78;
+
+            for (let i = 0; i < 8; i++) {
+
+                const angle =
+                    (Math.PI * 2 / 8) * i;
+
+                const x =
+                    Math.cos(angle) * orbitRadius;
+
+                const y =
+                    Math.sin(angle) * orbitRadius;
+
+                ctx.beginPath();
+
+                ctx.arc(
+                    x,
+                    y,
+                    2.5 + pulse * 1.5,
+                    0,
+                    Math.PI * 2
+                );
+
+                ctx.fillStyle =
+                    `hsl(${(hue + i * 45) % 360}, 100%, 85%)`;
+
+                ctx.shadowColor =
+                    ctx.fillStyle;
+
+                ctx.shadowBlur = 10;
+
+                ctx.fill();
+            }
+
+            ctx.restore();
+
+
+            // ========================================
+            // COUNTER ROTATING WHITE SPARKS
+            // ========================================
+
+            ctx.save();
+
+            ctx.rotate(-time * 0.001);
+
+            const innerOrbit =
+                ball.circleRadius * 0.62;
+
+            for (let i = 0; i < 4; i++) {
+
+                const angle =
+                    (Math.PI * 2 / 4) * i;
+
+                const x =
+                    Math.cos(angle) * innerOrbit;
+
+                const y =
+                    Math.sin(angle) * innerOrbit;
+
+                ctx.beginPath();
+
+                ctx.arc(
+                    x,
+                    y,
+                    2 + pulse,
+                    0,
+                    Math.PI * 2
+                );
+
+                ctx.fillStyle = "#FFFFFF";
+
+                ctx.shadowColor = "#FFFFFF";
+                ctx.shadowBlur = 12;
+
+                ctx.fill();
+            }
+
+            ctx.restore();
+
+
+            // ========================================
+            // CENTRAL ENERGY CORE
+            // ========================================
+
+            const coreGradient =
+                ctx.createRadialGradient(
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    18 + pulse * 5
+                );
+
+            coreGradient.addColorStop(
+                0,
+                `rgba(255, 255, 255, ${0.40 + pulse * 0.25})`
+            );
+
+            coreGradient.addColorStop(
+                0.4,
+                `hsla(${hue}, 100%, 85%, ${0.20 + pulse * 0.15})`
+            );
+
+            coreGradient.addColorStop(
+                1,
+                "rgba(255, 255, 255, 0)"
+            );
+
+            ctx.beginPath();
+
+            ctx.arc(
+                0,
+                0,
+                18 + pulse * 5,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fillStyle = coreGradient;
+            ctx.fill();
+        }
+
+
+        // ========================================
+        // 4096 - ABSOLUTELY INSANE
+        // ========================================
+
+        if (ball.value === 4096) {
+
+            // Deep animated rainbow interior
+            const megaGlow =
+                ctx.createRadialGradient(
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    ball.circleRadius
+                );
+
+            megaGlow.addColorStop(
+                0,
+                `hsla(${hue}, 100%, 90%, ${0.45 + pulse * 0.25})`
+            );
+
+            megaGlow.addColorStop(
+                0.30,
+                `hsla(${(hue + 70) % 360}, 100%, 70%, 0.30)`
+            );
+
+            megaGlow.addColorStop(
+                0.60,
+                `hsla(${(hue + 150) % 360}, 100%, 65%, 0.25)`
+            );
+
+            megaGlow.addColorStop(
+                0.85,
+                `hsla(${(hue + 240) % 360}, 100%, 70%, 0.35)`
+            );
+
+            megaGlow.addColorStop(
+                1,
+                `hsla(${hue}, 100%, 85%, 0.65)`
+            );
+
+            ctx.beginPath();
+
+            ctx.arc(
+                0,
+                0,
+                ball.circleRadius - 2,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fillStyle = megaGlow;
+            ctx.fill();
+
+
+            // Bright inner edge
+            ctx.beginPath();
+
+            ctx.arc(
+                0,
+                0,
+                ball.circleRadius - 5,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.strokeStyle =
+                `hsl(${hue}, 100%, 80%)`;
+
+            ctx.lineWidth =
+                5 + pulse * 2;
+
+            ctx.shadowColor =
+                `hsl(${hue}, 100%, 75%)`;
+
+            ctx.shadowBlur =
+                12 + pulse * 12;
+
+            ctx.stroke();
+
+
+            // ========================================
+            // ROTATING INTERNAL ENERGY PARTICLES
+            // ========================================
+
+            ctx.save();
+
+            ctx.rotate(time * 0.0018);
+
+            const orbitRadius =
+                ball.circleRadius * 0.78;
+
+            for (let i = 0; i < 8; i++) {
+
+                const angle =
+                    (Math.PI * 2 / 8) * i;
+
+                const x =
+                    Math.cos(angle) * orbitRadius;
+
+                const y =
+                    Math.sin(angle) * orbitRadius;
+
+                ctx.beginPath();
+
+                ctx.arc(
+                    x,
+                    y,
+                    3 + pulse * 2,
+                    0,
+                    Math.PI * 2
+                );
+
+                ctx.fillStyle =
+                    `hsl(${(hue + i * 45) % 360}, 100%, 80%)`;
+
+                ctx.shadowColor =
+                    ctx.fillStyle;
+
+                ctx.shadowBlur = 12;
+
+                ctx.fill();
+            }
+
+            ctx.restore();
+
+
+            // ========================================
+            // COUNTER-ROTATING INNER PARTICLES
+            // ========================================
+
+            ctx.save();
+
+            ctx.rotate(-time * 0.0013);
+
+            const innerOrbit =
+                ball.circleRadius * 0.55;
+
+            for (let i = 0; i < 4; i++) {
+
+                const angle =
+                    (Math.PI * 2 / 4) * i;
+
+                const x =
+                    Math.cos(angle) * innerOrbit;
+
+                const y =
+                    Math.sin(angle) * innerOrbit;
+
+                ctx.beginPath();
+
+                ctx.arc(
+                    x,
+                    y,
+                    3,
+                    0,
+                    Math.PI * 2
+                );
+
+                ctx.fillStyle = "#FFFFFF";
+
+                ctx.shadowColor = "#FFFFFF";
+                ctx.shadowBlur = 15;
+
+                ctx.fill();
+            }
+
+            ctx.restore();
+
+
+            // ========================================
+            // PULSING CENTER CORE
+            // ========================================
+
+            ctx.beginPath();
+
+            ctx.arc(
+                0,
+                0,
+                8 + pulse * 5,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fillStyle =
+                `hsla(${hue}, 100%, 90%, ${0.45 + pulse * 0.35})`;
+
+            ctx.shadowColor = "#FFFFFF";
+            ctx.shadowBlur =
+                15 + pulse * 15;
+
+            ctx.fill();
+        }
+
+
+        // ========================================
+        // BALL VALUE TEXT
+        // ========================================
+
         ctx.fillStyle = "#FFFFFF";
-        ctx.font = `bold ${fontSize}px Arial`;
+
+        ctx.font =
+            `bold ${fontSize}px Arial`;
+
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
-        // subtle shadow
-        ctx.shadowColor = "black";
-        ctx.shadowBlur = 4;
+
+        // 4096 text
+        if (ball.value === 4096) {
+
+            ctx.shadowColor =
+                `hsl(${hue}, 100%, 85%)`;
+
+            ctx.shadowBlur =
+                25 + pulse * 15;
+        }
+
+        // 2048 text
+        else if (ball.value === 2048) {
+
+            ctx.shadowColor = "#FFFFFF";
+
+            ctx.shadowBlur =
+                15 + pulse * 8;
+        }
+
+        // 1024 text
+        else if (ball.value === 1024) {
+
+            ctx.shadowColor = "#FFB0C0";
+
+            ctx.shadowBlur =
+                7 + pulse * 3;
+        }
+
+        // Normal balls
+        else {
+
+            ctx.shadowColor = "black";
+            ctx.shadowBlur = 4;
+        }
+
 
         ctx.fillText(
             ball.value,
@@ -391,10 +904,13 @@ function drawBallValues() {
             0
         );
 
+
+        // ========================================
+        // RESET FOR NEXT BALL
+        // ========================================
+
         ctx.restore();
-
     });
-
 }
 
 // ===== Merge Logic =====
@@ -405,7 +921,7 @@ function mergeBalls(ballA, ballB) {
     if (gameOver) return;
     if (ballA.isMerging || ballB.isMerging) return;
     if (ballA.value !== ballB.value) return;
-    if (ballA.value >= 2048) return;
+    if (ballA.value >= 4096) return;
 
     const ballABottom = ballA.position.y + ballA.circleRadius;
     const ballBBottom = ballB.position.y + ballB.circleRadius;
@@ -583,17 +1099,7 @@ async function endGame() {
 
     document.getElementById("restartBtn").textContent = "Play Again";
     
-    saveHighScore(score);
-
-    // ===== CONDITIONAL LEADERBOARD CHECK =====
-    // Check if the current score beats the 10th place score, or if the board isn't full
-    if (score > lowestLeaderboardScore || lowestLeaderboardScore === 0) {
-        console.log("Game over, score made it into the top 10");
-         // Show the custom aesthetic text input modal
-    } else {
-        console.log("Game over, but score did not qualify for the Top 10 leaderboard.");
-    }
-}
+    saveHighScore(score);}
 
 
 function drawGameOverOverlay() {
@@ -642,6 +1148,11 @@ function createProgressList() {
 
     LEVELS.forEach(value => {
 
+        // Hide 4096 until 2048 has been achieved
+        if (value === 4096 && !achievedValues.has(2048)) {
+            return;
+        }
+
         const ballType = BALL_TYPES[value];
 
         const item =
@@ -649,6 +1160,11 @@ function createProgressList() {
 
         item.className = "progressItem";
         item.dataset.value = value;
+
+        // Slam 4096 only during the reveal
+        if (value === 4096 && reveal4096AfterFade) {
+            item.classList.add("secret-reveal");
+        }
 
         const ballPreview =
             document.createElement("div");
@@ -679,9 +1195,10 @@ function winGame() {
     if (gameWon) return;
 
     gameWon = true;
-    canDrop = false;
+    //canDrop = false;
     
-    saveHighScore(score);
+    //saveHighScore(score);
+    showWinOverlay();
 
     console.log("You created 2048. You win!");
 
@@ -689,16 +1206,56 @@ function winGame() {
         "Play Again";
 }
 
-function drawWinOverlay() {
+let winOverlayVisible = false;
+let winOverlayFading = false;
+let winOverlayAlpha = 1;
 
-    if (!gameWon) return;
+function showWinOverlay() {
+    winOverlayVisible = true;
+    winOverlayFading = false;
+    winOverlayAlpha = 1;
+}
+
+function drawWinOverlay() {
+    if (!winOverlayVisible) return;
 
     const ctx = render.context;
+    const time = performance.now();
+
+    // Vibrate / shake
+    const shakeX = Math.sin(time * 0.08) * 6;
+    const shakeY = Math.cos(time * 0.10) * 4;
+
+    // Rainbow color animation
+    const hue = (time * 0.25) % 360;
+
+    // Fade after player clicks
+    if (winOverlayFading) {
+        winOverlayAlpha -= 0.04;
+
+        if (winOverlayAlpha <= 0) {
+
+            winOverlayAlpha = 0;
+            winOverlayVisible = false;
+            winOverlayFading = false;
+
+            // Reveal 4096 only after the win overlay
+            // has completely disappeared
+            if (reveal4096AfterFade) {
+                createProgressList();
+                reveal4096AfterFade = false;
+            }
+
+            return;
+        }
+    }
 
     ctx.save();
 
-    ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
+    ctx.globalAlpha = winOverlayAlpha;
 
+    // Darken board slightly
+    ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
     ctx.fillRect(
         0,
         0,
@@ -706,47 +1263,110 @@ function drawWinOverlay() {
         canvas.height
     );
 
+    ctx.translate(
+        canvas.width / 2 + shakeX,
+        canvas.height / 2 + shakeY
+    );
+
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    ctx.fillStyle = "#FFD54F";
-    ctx.shadowColor = "rgba(255, 213, 79, 0.7)";
-    ctx.shadowBlur = 18;
+    // Rainbow text
+    ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
 
-    ctx.font = "bold 48px Arial";
+    // Glow matches rainbow color
+    ctx.shadowColor = `hsl(${hue}, 100%, 60%)`;
+    ctx.shadowBlur = 30;
 
-    ctx.fillText(
-        "YOU WIN!",
-        canvas.width / 2,
-        canvas.height / 2 - 55
-    );
-
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 24px Arial";
+    ctx.font = "900 48px Arial";
 
     ctx.fillText(
-        "You created 2048",
-        canvas.width / 2,
-        canvas.height / 2 + 5
-    );
-
-    ctx.font = "bold 20px Arial";
-
-    ctx.fillText(
-        `Score: ${score}`,
-        canvas.width / 2,
-        canvas.height / 2 + 50
+        "2048 ACHIEVED!",
+        0,
+        0
     );
 
     ctx.restore();
 }
 
+let milestone1024Visible = false;
+let milestone1024Alpha = 1;
+let milestone1024StartTime = 0;
+
+function show1024Overlay() {
+    milestone1024Visible = true;
+    milestone1024Alpha = 1;
+    milestone1024StartTime = performance.now();
+}
+
+function draw1024Overlay() {
+
+    if (!milestone1024Visible) return;
+
+    const ctx = render.context;
+    const elapsed = performance.now() - milestone1024StartTime;
+
+        // Vibrate / shake
+    const shakeX = Math.sin(elapsed * 0.08) * 3;
+    const shakeY = Math.cos(elapsed * 0.10) * 2;
+
+    // Stay visible, then fade away
+    if (elapsed > 5000) {
+        milestone1024Alpha -= 0.04;
+
+        if (milestone1024Alpha <= 0) {
+            milestone1024Visible = false;
+            milestone1024Alpha = 0;
+            return;
+        }
+    }
+
+    ctx.save();
+    ctx.translate(
+        canvas.width / 2 + shakeX,
+        canvas.height / 2 + shakeY
+    );
+
+
+    ctx.globalAlpha = milestone1024Alpha;
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // Main text
+    ctx.fillStyle = "#FFB0C0";
+    ctx.shadowColor = "#FF2D55";
+    ctx.shadowBlur = 18;
+
+    ctx.font = "900 38px Arial";
+
+    ctx.fillText(
+        "1024 ACHIEVED!",
+        0,
+        -15
+    );
+
+    // Smaller message
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 18px Arial";
+
+    ctx.fillText(
+        "Almost there...",
+        0,
+        30
+    );
+
+    ctx.restore();
+}
+
+
 // ===== Helpers =====
 
 function randomStartingValue() {
 
-    const options = [2, 2, 2, 2, 4, 4, 8];
+    //const options = [2, 2, 2, 2, 4, 4, 8];
+    const options = [512]; //Test Mode
 
     return options[
         Math.floor(Math.random() * options.length)
@@ -874,40 +1494,46 @@ let biggestBall = 2;
 
 function recordAchievement(value) {
 
+    // Ignore values already achieved
     if (achievedValues.has(value)) {
         return;
     }
 
+    // Record achievement
     achievedValues.add(value);
 
     // Track highest ball achieved
     if (value > biggestBall) {
-    biggestBall = value;
-    console.log(`New biggest ball: ${biggestBall}`);
-}
+        biggestBall = value;
+        console.log(`New biggest ball: ${biggestBall}`);
+    }
 
-    const item =
-        document.querySelector(
-            `.progressItem[data-value="${value}"]`
-        );
+    // Find the progress item
+    const item = document.querySelector(
+        `.progressItem[data-value="${value}"]`
+    );
 
+    // Mark progress item as achieved
     if (item) {
-
         item.classList.add(
             "achieved",
             "just-achieved"
         );
 
         setTimeout(() => {
-            item.classList.remove(
-                "just-achieved"
-            );
+            item.classList.remove("just-achieved");
         }, 400);
     }
 
     console.log(`Achievement unlocked: ${value}`);
 
-    if (value >= WIN_VALUE) {
+    if (value === 1024) {
+        show1024Overlay();
+    }
+
+    // Trigger the 2048 win overlay.
+    // Do not rebuild the progress list here.
+    if (value === WIN_VALUE) {
         winGame();
     }
 }
@@ -939,6 +1565,10 @@ canvas.addEventListener("mousemove", (event) => {
 restartBtn.addEventListener("click", restartGame);
 
 canvas.addEventListener("click", (event) => {
+    if (winOverlayVisible && !winOverlayFading) {
+        winOverlayFading = true;
+        reveal4096AfterFade = true;
+    }
 
     if (gameOver || !canDrop) return;
 
@@ -958,7 +1588,7 @@ canvas.addEventListener("click", (event) => {
     );
 
     nextBallValue = randomStartingValue();
-
+    
     // document.getElementById("nextBall").textContent = nextBallValue;
 
 });
@@ -1016,6 +1646,8 @@ window.addEventListener("keyup", (event) => {
     }
 });
 
+
+
 // ===== Start Physics =====
 
 createProgressList();
@@ -1035,6 +1667,7 @@ Matter.Events.on(render, "afterRender", () => {
     drawBallValues();
     drawGameOverOverlay();
     drawComboText();
+    draw1024Overlay();
     drawWinOverlay();
 });
 
